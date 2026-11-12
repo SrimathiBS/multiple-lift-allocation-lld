@@ -21,41 +21,43 @@ public class Main {
             }
         }
 
-        int buildingLowestFloor = 0, buildingHighestFloor = 0,currentFloor = 0;
+        int lowestFloor = 0, highestFloor = 0, currentFloor = 0;
         for (int liftNumber = 1; liftNumber <= noOfLifts; liftNumber++) {
             System.out.println("\nLift " + liftNumber);
             while (true) {
                 try {
                     System.out.print("Enter lowest floor: ");
-                    buildingLowestFloor = scanner.nextInt();
+                    lowestFloor = scanner.nextInt();
                     System.out.print("Enter highest floor: ");
-                    buildingHighestFloor = scanner.nextInt();
-                    if (buildingHighestFloor <= buildingLowestFloor) {
+                    highestFloor = scanner.nextInt();
+                    if (highestFloor <= lowestFloor) {
                         System.out.println("highest floor should not be less than or equal to lowest floor");
                         continue;
                     }
                     while (true) {
                         System.out.print("Enter current floor: ");
                         currentFloor = scanner.nextInt();
-                        if (currentFloor < buildingLowestFloor || currentFloor > buildingHighestFloor) {
-                            System.out.println("Enter current floor from " + buildingLowestFloor + " to " + buildingHighestFloor);
-                        }else break;
+                        if (currentFloor < lowestFloor || currentFloor > highestFloor) {
+                            System.out.println("Enter current floor from " + lowestFloor + " to " + highestFloor);
+                        } else {
+                            break;
+                        }
                     }
                     break;
-
                 } catch (InputMismatchException e) {
                     System.out.println("Enter valid floor number");
                     scanner.nextLine();
                 }
             }
-            Lift lift = new Lift(liftNumber, currentFloor, Direction.IDLE, buildingLowestFloor, buildingHighestFloor);
+
+            Lift lift = new Lift(liftNumber, currentFloor, Direction.IDLE, lowestFloor, highestFloor);
             while (true) {
                 try {
                     System.out.print("Enter direction of the lift (UP/DOWN/IDLE): ");
                     lift.direction = Direction.valueOf(scanner.next().trim().toUpperCase());
                     break;
                 } catch (IllegalArgumentException e) {
-                    System.out.println("Invalid direction. Use UP, DOWN or IDLE.");
+                    System.out.println("Invalid direction. Use UP or DOWN or IDLE.");
                 }
             }
 
@@ -69,7 +71,7 @@ public class Main {
                             break;
                         }
                         int nextFloor = Integer.parseInt(input);
-                        if (nextFloor >= buildingLowestFloor && nextFloor <= buildingHighestFloor && nextFloor != currentFloor) {
+                        if (nextFloor >= lowestFloor && nextFloor <= highestFloor && nextFloor != currentFloor) {
                             lift.nextFloors.add(nextFloor);
                         } else {
                             throw new IllegalArgumentException();
@@ -78,23 +80,25 @@ public class Main {
                         scanner.nextLine();
                         System.out.println("Enter a whole number for the floor, or type done");
                     } catch (IllegalArgumentException e) {
-                        System.out.println("Enter valid floor from " + buildingLowestFloor + " to " + buildingHighestFloor + " and it should not be equal to current floor");
+                        System.out.println("Enter valid floor from " + lowestFloor + " to " + highestFloor + " and it should not be equal to current floor");
                     }
                 }
             }
 
             allocationService.addLift(lift);
-
         }
 
         // only one pickup request is taken, because floors are never removed once the lift serves them
+        int pickupFloor = 0;
+        Request request = null;
         while (true) {
-            Request request = null;
+
             System.out.print("\nEnter pickup floor: ");
             try {
-                int pickupFloor = scanner.nextInt();
-                if (pickupFloor >= buildingLowestFloor && pickupFloor <= buildingHighestFloor) {
+                pickupFloor = scanner.nextInt();
+                if (pickupFloor >= lowestFloor && pickupFloor <= highestFloor) {
                     request = new Request(pickupFloor);
+                    break;
                 } else {
                     throw new IllegalArgumentException();
                 }
@@ -103,50 +107,50 @@ public class Main {
                 System.out.println("Enter a whole number for the floor");
                 continue;
             } catch (IllegalArgumentException e) {
-                System.out.println("Enter valid floor from " + buildingLowestFloor + " to " + buildingHighestFloor);
+                System.out.println("Enter valid floor from " + lowestFloor + " to " + highestFloor);
                 continue;
             }
-            scanner.nextLine();
-
-                System.out.print("Enter direction (UP/DOWN, comma-separated if both): ");
-                String directions = scanner.nextLine();
-                String[] directionValues = directions.split(",");
-                for (String value : directionValues) {
-                    try {
-                        if (value.trim().toUpperCase().equals("IDLE")) {
-                            throw new IllegalArgumentException();
-                        } else {
-                            Direction direction = Direction.valueOf(value.trim().toUpperCase());
-                            if ((request.getPickupFloor() == buildingHighestFloor && direction == Direction.UP) ||
-                                    (request.getPickupFloor() == buildingLowestFloor && direction == Direction.DOWN)) {
-                                System.out.println("Invalid direction: " + direction + " is not possible for floor " + request.getPickupFloor());
-                            } else {
-                                request.addDirection(direction);
-                            }
-                        }
-                    } catch (IllegalArgumentException e) {
-                        System.out.println("Invalid direction: " + value + ". Use UP, DOWN, or UP,DOWN.");
-                    }
-                }
-
-
-            if (request.getDirection().isEmpty()) {
-                System.out.println("No valid direction entered, request not added");
-                continue ;
-            }
-            allocationService.allocateLift(request);
-            return;
         }
+        scanner.nextLine();          // rest of the line after the floor number
+
+        // a pickup always has a direction, so ask again until at least one valid direction is entered
+        boolean cond=true;
+        while (cond) {
+            System.out.print("Enter direction (UP/DOWN, comma-separated if both): ");
+            String directions = scanner.nextLine();
+            String[] directionValues = directions.split(",");
+            for (String value : directionValues) {
+                try {
+                    if (value.trim().toUpperCase().equals("IDLE")) {
+                        throw new IllegalArgumentException();
+                    } else {
+                        int c=0;
+                        Direction direction = Direction.valueOf(value.trim().toUpperCase());
+                        if ((request.getPickupFloor() == highestFloor && direction == Direction.UP) ||
+                                (request.getPickupFloor() == lowestFloor && direction == Direction.DOWN)) {
+                            System.out.println("Invalid direction: " + direction + " is not possible for floor " + request.getPickupFloor());
+                        }
+                        else {
+                            request.addDirection(direction);
+                            c+=1;
+                        }
+                        if(c==directionValues.length){
+                            cond=false;
+                        }
+                    }
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Invalid direction: " + value + ". Use UP, DOWN, or UP,DOWN.");
+                }
+            }
+        }
+
+        allocationService.allocateLift(request);
+
     }
 }
 
 
-
-//after giving a lift direction as up and if we did not enter any pickup request will the lift's direction change from up to idle?
-//what does setdirection method in liftallocationservice does?explain in simple words why it is needed?
-//in main while getting direction if the direction entered is not correct, then we have to get the correct direction as input right , for that how should i loop?
-//also if there is pickup floor then direction should be there right becasue in real world when a user presses a diretion its direction and floor numbers are getting stored right, so if the direction is empty ask the user to enter the direction again.
-//in allocatelift method why are u iterating w.r.t to request direction size ?
-//how can we say that we cannot serve even if there is one lift , at some point of time it will serve , so dont have variable like cannotserve anol in liftallocationservice.
-//how bestcost,bestlift is calculated
-//like this there are many unwanted logic and conditions i think . u better review this code make correct updated like i did earlier, make sure there is no unwanted logic or unnecessary conditions. give fully updated zip file
+//i did not understand liftallocation service class here. there are too any methods . are u making it complicated?
+//in findbestfloor method why did u use canserve?shouldnt we calculate cost for all lift? is this condition really needed if (requestDirection == Direction.UP) return pickupFloor < lift.highestfloor;
+//        return pickupFloor > lift.lowestfloor; because what if there are 2 lift and both are in up direction and the pickupFloor > lift.highestfloor?then what will happen , we have to calculate cost for those 2 also right?
+// i have pasted the updated code , u give the updated zip file where dont change any codes in main file without asking me. make sure u did not change the structure and logic anol.
