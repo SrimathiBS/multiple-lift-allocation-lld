@@ -3,15 +3,13 @@ import java.util.TreeSet;
 
 public class LiftAllocationService {
     ArrayList<Lift> lifts = new ArrayList<>();
-
+    // saves the lift in the list, after correcting its direction
     public void addLift(Lift lift) {
         setDirection(lift);
         lifts.add(lift);
     }
 
-    // The direction the user gave may not match the next floors, so correct it:
-    // no next floors -> nothing to do -> IDLE
-    // UP but no next floor above (or DOWN but none below) -> it has to go the other way
+    // the direction the user typed may not match the lift's next floors, so correcting it
     public void setDirection(Lift lift) {
         if (lift.nextFloors.isEmpty()) {
             lift.direction = Direction.IDLE;
@@ -22,15 +20,6 @@ public class LiftAllocationService {
         }
     }
 
-    // a lift serves the pickup only if the floor is in its floors and it can go in the requested direction from there
-    public boolean canServe(Lift lift, int pickupFloor, Direction requestDirection) {
-        if (pickupFloor < lift.lowestfloor || pickupFloor > lift.highestfloor) return false;
-        if (requestDirection == Direction.UP) return pickupFloor < lift.highestfloor;
-        return pickupFloor > lift.lowestfloor;
-    }
-
-    // floors the lift travels before it opens its door at the pickup floor
-    // the lift turns at its last (or first) next floor, it never goes further than that
     public int calculateCost(Lift lift, int pickupFloor, Direction requestDirection) {
         int liftFloor = lift.currentFloor;
         if (lift.direction == Direction.IDLE) {
@@ -59,7 +48,7 @@ public class LiftAllocationService {
         }
     }
 
-    // number of next floors the lift stops at before it reaches the pickup floor (only the floors on its way)
+    // no of next floors the lift stops at before it reaches the pickup floor
     private int countStopsBeforePickup(Lift lift, int pickupFloor, Direction requestDirection) {
         if (lift.direction == Direction.IDLE) return 0;
 
@@ -72,28 +61,27 @@ public class LiftAllocationService {
                 if (pickupFloor >= liftFloor) {
                     return stops.subSet(liftFloor, false, pickupFloor, false).size();
                 }
-                return stops.size();    // goes up, comes down, goes up again: stops at every next floor first
+                return stops.size();
             }
-            return stops.tailSet(Math.min(liftFloor, pickupFloor), false).size();   // goes up to the turn, comes down to the pickup
+            return stops.tailSet(Math.min(liftFloor, pickupFloor), false).size();
         } else {
             if (requestDirection == Direction.DOWN) {
                 if (pickupFloor <= liftFloor) {
                     return stops.subSet(pickupFloor, false, liftFloor, false).size();
                 }
-                return stops.size();    // goes down, goes up, comes down again: stops at every next floor first
+                return stops.size();
             }
-            return stops.headSet(Math.max(liftFloor, pickupFloor), false).size();   // goes down to the turn, comes up to the pickup
+            return stops.headSet(Math.max(liftFloor, pickupFloor), false).size();
         }
     }
 
-    // 0 = idle, 1 = same direction as the request, 2 = opposite
+    // in tie breaker when req counts are same we rank the lift w.r.t its direction
     private int rank(Lift lift, Direction requestDirection) {
         if (lift.direction == Direction.IDLE) return 0;
         return lift.direction == requestDirection ? 1 : 2;
     }
 
-    // tie breaker: cost, no of stops before the pickup floor, idle, same direction, opposite, lift id
-    private boolean isBetter(Lift lift, int cost, Lift bestLift, int bestCost, int pickupFloor, Direction requestDirection) {
+    private boolean tieBreaker(Lift lift, int cost, Lift bestLift, int bestCost, int pickupFloor, Direction requestDirection) {
         if (cost != bestCost) return cost < bestCost;
 
         int stops = countStopsBeforePickup(lift, pickupFloor, requestDirection);
@@ -107,15 +95,13 @@ public class LiftAllocationService {
         return lift.id < bestLift.id;
     }
 
-    // goes through every lift that can serve the pickup and keeps the best one found so far
+    //check current lift is better then bestlift and updated acc.
     private Lift findBestLift(int pickupFloor, Direction requestDirection) {
         Lift bestLift = null;
         int bestCost = 0;
         for (Lift lift : lifts) {
-            if (!canServe(lift, pickupFloor, requestDirection)) continue;
-
             int cost = calculateCost(lift, pickupFloor, requestDirection);
-            if (bestLift == null || isBetter(lift, cost, bestLift, bestCost, pickupFloor, requestDirection)) {
+            if (bestLift == null || tieBreaker(lift, cost, bestLift, bestCost, pickupFloor, requestDirection)) {
                 bestLift = lift;
                 bestCost = cost;
             }
@@ -123,7 +109,7 @@ public class LiftAllocationService {
         return bestLift;
     }
 
-    // a request has 1 direction (UP or DOWN) or 2 (UP and DOWN), every direction gets its own best lift
+    //doubt
     public void allocateLift(Request request) {
         int pickupFloor = request.getPickupFloor();
         ArrayList<Direction> requestDirections = request.getDirection();
@@ -137,11 +123,9 @@ public class LiftAllocationService {
         if (bestLifts.length == 2 && bestLifts[0] != bestLifts[1]) {
             Direction first = requestDirections.get(0);
             Direction second = requestDirections.get(1);
-            if (canServe(bestLifts[0], pickupFloor, second)
-                    && calculateCost(bestLifts[0], pickupFloor, second) == calculateCost(bestLifts[1], pickupFloor, second)) {
+            if (calculateCost(bestLifts[0], pickupFloor, second) == calculateCost(bestLifts[1], pickupFloor, second)) {
                 bestLifts[1] = bestLifts[0];
-            } else if (canServe(bestLifts[1], pickupFloor, first)
-                    && calculateCost(bestLifts[1], pickupFloor, first) == calculateCost(bestLifts[0], pickupFloor, first)) {
+            } else if (calculateCost(bestLifts[1], pickupFloor, first) == calculateCost(bestLifts[0], pickupFloor, first)) {
                 bestLifts[0] = bestLifts[1];
             }
         }
