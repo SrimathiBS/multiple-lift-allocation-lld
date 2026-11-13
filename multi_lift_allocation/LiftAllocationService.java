@@ -96,12 +96,14 @@ public class LiftAllocationService {
     }
 
     //check current lift is better then bestlift and updated acc.
-    private Lift findBestLift(int pickupFloor, Direction requestDirection) {
+    private Lift findBestLift(int pickupFloor, Direction requestDirection, Lift excludedLift) {
         Lift bestLift = null;
         int bestCost = 0;
         for (Lift lift : lifts) {
+            if (lift == excludedLift) continue;
+
             int cost = calculateCost(lift, pickupFloor, requestDirection);
-            if (bestLift == null || tieBreaker(lift, cost, bestLift, bestCost, pickupFloor, requestDirection)) {
+            if (bestLift == null || isBetter(lift, cost, bestLift, bestCost, pickupFloor, requestDirection)) {
                 bestLift = lift;
                 bestCost = cost;
             }
@@ -112,26 +114,15 @@ public class LiftAllocationService {
     //doubt
     public void allocateLift(Request request) {
         int pickupFloor = request.getPickupFloor();
-        ArrayList<Direction> requestDirections = request.getDirection();
+        Lift assignedLift = null;       // lift that got the previous direction of this request
 
-        Lift[] bestLifts = new Lift[requestDirections.size()];
-        for (int i = 0; i < bestLifts.length; i++) {
-            bestLifts[i] = findBestLift(pickupFloor, requestDirections.get(i));
-        }
-
-        // UP and DOWN got different lifts, but one of them is equally good for the other direction too -> use that one lift
-        if (bestLifts.length == 2 && bestLifts[0] != bestLifts[1]) {
-            Direction first = requestDirections.get(0);
-            Direction second = requestDirections.get(1);
-            if (calculateCost(bestLifts[0], pickupFloor, second) == calculateCost(bestLifts[1], pickupFloor, second)) {
-                bestLifts[1] = bestLifts[0];
-            } else if (calculateCost(bestLifts[1], pickupFloor, first) == calculateCost(bestLifts[0], pickupFloor, first)) {
-                bestLifts[0] = bestLifts[1];
+        for (Direction requestDirection : request.getDirection()) {
+            Lift bestLift = findBestLift(pickupFloor, requestDirection, assignedLift);
+            if (bestLift == null) {
+                bestLift = assignedLift;
             }
-        }
-
-        for (int i = 0; i < bestLifts.length; i++) {
-            System.out.println("Lift " + bestLifts[i].id + " assigned for floor " + pickupFloor + " going " + requestDirections.get(i));
+            assignedLift = bestLift;
+            System.out.println("Lift " + bestLift.id + " assigned for floor " + pickupFloor + " going " + requestDirection);
         }
     }
 }
