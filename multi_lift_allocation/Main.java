@@ -22,35 +22,41 @@ public class Main {
         }
 
         int lowestFloor = 0, highestFloor = 0, currentFloor = 0;
+        while (true) {
+            try {
+                System.out.print("Enter lowest floor: ");
+                lowestFloor = scanner.nextInt();
+                System.out.print("Enter highest floor: ");
+                highestFloor = scanner.nextInt();
+                if (highestFloor <= lowestFloor) {
+                    System.out.println("highest floor should not be less than or equal to lowest floor");
+                    continue;
+                }
+                break;
+            } catch (InputMismatchException e) {
+                System.out.println("Enter valid floor number");
+                scanner.nextLine();
+            }
+        }
+
         for (int liftNumber = 1; liftNumber <= noOfLifts; liftNumber++) {
             System.out.println("\nLift " + liftNumber);
             while (true) {
                 try {
-                    System.out.print("Enter lowest floor: ");
-                    lowestFloor = scanner.nextInt();
-                    System.out.print("Enter highest floor: ");
-                    highestFloor = scanner.nextInt();
-                    if (highestFloor <= lowestFloor) {
-                        System.out.println("highest floor should not be less than or equal to lowest floor");
-                        continue;
+                    System.out.print("Enter current floor: ");
+                    currentFloor = scanner.nextInt();
+                    if (currentFloor < lowestFloor || currentFloor > highestFloor) {
+                        System.out.println("Enter current floor from " + lowestFloor + " to " + highestFloor);
+                    } else {
+                        break;
                     }
-                    while (true) {
-                        System.out.print("Enter current floor: ");
-                        currentFloor = scanner.nextInt();
-                        if (currentFloor < lowestFloor || currentFloor > highestFloor) {
-                            System.out.println("Enter current floor from " + lowestFloor + " to " + highestFloor);
-                        } else {
-                            break;
-                        }
-                    }
-                    break;
                 } catch (InputMismatchException e) {
                     System.out.println("Enter valid floor number");
                     scanner.nextLine();
                 }
             }
 
-            Lift lift = new Lift(liftNumber, currentFloor, Direction.IDLE, lowestFloor, highestFloor);
+            Lift lift = new Lift(liftNumber, currentFloor, Direction.IDLE);
             while (true) {
                 try {
                     System.out.print("Enter direction of the lift (UP/DOWN/IDLE): ");
@@ -61,7 +67,7 @@ public class Main {
                 }
             }
 
-            // idle lift has no next floors. If no next floor is entered, addLift saves the lift as IDLE
+            // idle lift will not have next floors
             if (lift.getDirection() != Direction.IDLE) {
                 while (true) {
                     System.out.print("Enter next floor (type done to finish): ");
@@ -88,7 +94,6 @@ public class Main {
             allocationService.addLift(lift);
         }
 
-        // only one pickup request is taken, because floors are never removed once the lift serves them
         int pickupFloor = 0;
         Request request = null;
         while (true) {
@@ -103,7 +108,7 @@ public class Main {
                     throw new IllegalArgumentException();
                 }
             } catch (InputMismatchException e) {
-                scanner.nextLine();   // throw away the wrong input (letters, decimals...)
+                scanner.nextLine();
                 System.out.println("Enter a whole number for the floor");
                 continue;
             } catch (IllegalArgumentException e) {
@@ -111,20 +116,20 @@ public class Main {
                 continue;
             }
         }
-        scanner.nextLine();          // rest of the line after the floor number
+        scanner.nextLine();
 
-        // a pickup always has a direction, so ask again until at least one valid direction is entered
+
         boolean cond=true;
         while (cond) {
             System.out.print("Enter direction (UP/DOWN, comma-separated if both): ");
             String directions = scanner.nextLine();
             String[] directionValues = directions.split(",");
+            int c=0;
             for (String value : directionValues) {
                 try {
                     if (value.trim().toUpperCase().equals("IDLE")) {
                         throw new IllegalArgumentException();
                     } else {
-                        int c=0;
                         Direction direction = Direction.valueOf(value.trim().toUpperCase());
                         if ((request.getPickupFloor() == highestFloor && direction == Direction.UP) ||
                                 (request.getPickupFloor() == lowestFloor && direction == Direction.DOWN)) {
@@ -149,8 +154,4 @@ public class Main {
     }
 }
 
-
-//i did not understand liftallocation service class here. there are too any methods . are u making it complicated?
-//in findbestfloor method why did u use canserve?shouldnt we calculate cost for all lift? is this condition really needed if (requestDirection == Direction.UP) return pickupFloor < lift.highestfloor;
-//        return pickupFloor > lift.lowestfloor; because what if there are 2 lift and both are in up direction and the pickupFloor > lift.highestfloor?then what will happen , we have to calculate cost for those 2 also right?
-// i have pasted the updated code , u give the updated zip file where dont change any codes in main file without asking me. make sure u did not change the structure and logic anol.
+//in countStopsBeforePickup why did u remove pickup from the stop treeset we used  return stops.subSet(liftFloor, false, pickupFloor, false).size(); so that it will not include pickupfloor in the subset right?
