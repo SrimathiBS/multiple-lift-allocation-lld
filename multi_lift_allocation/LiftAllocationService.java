@@ -96,33 +96,30 @@ public class LiftAllocationService {
     }
 
     //check current lift is better then bestlift and updated acc.
-    private Lift findBestLift(int pickupFloor, Direction requestDirection, Lift excludedLift) {
-        Lift bestLift = null;
-        int bestCost = 0;
-        for (Lift lift : lifts) {
-            if (lift == excludedLift) continue;
-
-            int cost = calculateCost(lift, pickupFloor, requestDirection);
-            if (bestLift == null || isBetter(lift, cost, bestLift, bestCost, pickupFloor, requestDirection)) {
-                bestLift = lift;
-                bestCost = cost;
-            }
+    private Lift findBestLift(ArrayList<Lift> availableLifts, int pickupFloor, Direction requestDirection) {
+    Lift bestLift = null;
+    int bestCost = 0;
+    for (Lift lift : availableLifts) {
+        int cost = calculateCost(lift, pickupFloor, requestDirection);
+        if (bestLift == null || isBetter(lift, cost, bestLift, bestCost, pickupFloor, requestDirection)) {
+            bestLift = lift;
+            bestCost = cost;
         }
-        return bestLift;
+    }
+    return bestLift;
     }
 
     //doubt
     public void allocateLift(Request request) {
-        int pickupFloor = request.getPickupFloor();
-        Lift assignedLift = null;       // lift that got the previous direction of this request
+    int pickupFloor = request.getPickupFloor();
+    ArrayList<Lift> availableLifts = new ArrayList<>(lifts);   // a copy, the real list is not changed
 
-        for (Direction requestDirection : request.getDirection()) {
-            Lift bestLift = findBestLift(pickupFloor, requestDirection, assignedLift);
-            if (bestLift == null) {
-                bestLift = assignedLift;
-            }
-            assignedLift = bestLift;
-            System.out.println("Lift " + bestLift.id + " assigned for floor " + pickupFloor + " going " + requestDirection);
+    for (Direction requestDirection : request.getDirection()) {
+        Lift bestLift = findBestLift(availableLifts, pickupFloor, requestDirection);
+        if (availableLifts.size() > 1) {
+            availableLifts.remove(bestLift);    // this lift is now busy with the first passenger
         }
+        System.out.println("Lift " + bestLift.id + " assigned for floor " + pickupFloor + " going " + requestDirection);
+    }
     }
 }
