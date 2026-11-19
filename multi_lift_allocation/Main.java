@@ -28,6 +28,10 @@ public class Main {
                 lowestFloor = scanner.nextInt();
                 System.out.print("Enter highest floor: ");
                 highestFloor = scanner.nextInt();
+                if (highestFloor <= 0) {
+                    System.out.println("highest floor should be greater than 0");
+                    continue;
+                }
                 if (highestFloor <= lowestFloor) {
                     System.out.println("highest floor should not be less than or equal to lowest floor");
                     continue;
