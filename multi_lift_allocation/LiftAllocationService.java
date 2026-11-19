@@ -77,16 +77,16 @@ public class LiftAllocationService {
 
     // in tie breaker when req counts are same we rank the lift w.r.t its direction
     private int rank(Lift lift, Direction requestDirection) {
-        if (lift.direction == Direction.IDLE) return 0;
-        return lift.direction == requestDirection ? 1 : 2;
+        if (lift.direction == Direction.UP && requestDirection == Direction.UP && lift.currentFloor <= pickupFloor) return 1;
+        if (lift.direction == Direction.DOWN && requestDirection == Direction.DOWN && lift.currentFloor >= pickupFloor) return 1;
+        return 2;
     }
 
     private boolean tieBreaker(Lift lift, int cost, Lift bestLift, int bestCost, int pickupFloor, Direction requestDirection) {
-        if (cost != bestCost) return cost < bestCost;
-
         int stops = countStopsBeforePickup(lift, pickupFloor, requestDirection);
         int bestStops = countStopsBeforePickup(bestLift, pickupFloor, requestDirection);
         if (stops != bestStops) return stops < bestStops;
+        if (cost != bestCost) return cost < bestCost;
 
         int rank = rank(lift, requestDirection);
         int bestRank = rank(bestLift, requestDirection);
